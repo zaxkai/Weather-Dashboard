@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOIR — Weather</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cinzel:wght@400;500&family=Raleway:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:   #080808;
+  --black2:  #0e0e0e;
+  --black3:  #141414;
+  --surface: #111111;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --gold:    #c9a96e;
+  --gold-lt: #e8c98a;
+  --gold-dk: #8a6a38;
+  --white:   #f0ece4;
+  --dim:     rgba(240,236,228,0.38);
+  --dim2:    rgba(240,236,228,0.18);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Raleway',sans-serif;
+  font-weight:300;
+  background:var(--black);
+  color:var(--white);
+  min-height:100vh;
+  overflow-x:hidden;
+  letter-spacing:0.02em;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:0.025;pointer-events:none;
+}
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.glow-orb{position:absolute;border-radius:50%;filter:blur(130px);opacity:0;transition:opacity 3s ease;}
+.glow-orb.a{width:700px;height:700px;top:-250px;right:-150px;background:radial-gradient(circle,rgba(201,169,110,0.07) 0%,transparent 70%);animation:driftA 22s ease-in-out infinite;}
+.glow-orb.b{width:450px;height:450px;bottom:-150px;left:-120px;background:radial-gradient(circle,rgba(201,169,110,0.05) 0%,transparent 70%);animation:driftB 28s ease-in-out infinite;}
+.glow-orb.active{opacity:1;}
+@keyframes driftA{0%,100%{transform:translate(0,0);}33%{transform:translate(-60px,80px);}66%{transform:translate(40px,-40px);}}
+@keyframes driftB{0%,100%{transform:translate(0,0);}50%{transform:translate(80px,-60px);}}
+.particles{position:fixed;inset:0;z-index:1;pointer-events:none;}
+.pt{position:absolute;background:var(--gold);border-radius:50%;opacity:0;animation:ptFloat var(--d,10s) ease-in-out infinite var(--dl,0s);}
+@keyframes ptFloat{0%{opacity:0;transform:translateY(0) scale(1);}20%{opacity:0.5;}80%{opacity:0.2;}100%{opacity:0;transform:translateY(-100px) scale(0);}}
+.wrap{position:relative;z-index:10;max-width:1080px;margin:0 auto;padding:56px 28px 100px;}
+@keyframes reveal{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+/* MASTHEAD */
+.masthead{display:flex;align-items:center;justify-content:space-between;margin-bottom:52px;animation:reveal 1s ease both;}
+.brand{font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.45em;color:var(--gold);text-transform:uppercase;}
+.brand-line{width:56px;height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin-top:7px;}
+.tagline{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--dim);letter-spacing:0.05em;}
+
+/* SEARCH */
+.search-row{display:flex;gap:0;margin-bottom:56px;border:1px solid var(--border2);background:var(--surface);transition:border-color 0.3s,box-shadow 0.3s;animation:reveal 1s 0.1s ease both;}
+.search-row:focus-within{border-color:var(--gold-dk);box-shadow:0 0 0 1px var(--gold-dk),0 24px 60px rgba(0,0,0,0.6);}
+.search-input{flex:1;background:none;border:none;padding:18px 28px;color:var(--white);font-family:'Raleway',sans-serif;font-weight:300;font-size:15px;letter-spacing:0.08em;outline:none;}
+.search-input::placeholder{color:var(--dim2);letter-spacing:0.15em;font-size:13px;}
+.dvd{width:1px;background:var(--border2);flex-shrink:0;}
+.unit-grp{display:flex;}
+.unit-btn{background:none;border:none;padding:18px 18px;color:var(--dim);font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.25em;cursor:pointer;transition:all 0.2s;position:relative;}
+.unit-btn.active{color:var(--gold);}
+.unit-btn.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;height:1px;background:var(--gold);}
+.usep{width:1px;background:var(--border);align-self:stretch;}
+.search-btn{background:none;border:none;border-left:1px solid var(--border2);padding:18px 32px;color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.3em;cursor:pointer;transition:all 0.3s;text-transform:uppercase;}
+.search-btn:hover{background:var(--gold);color:var(--black);}
+
+/* ERROR */
+.err-msg{font-family:'Cormorant Garamond',serif;font-style:italic;color:#b04040;font-size:15px;margin-bottom:24px;padding:14px 20px;border-left:2px solid #702020;display:none;animation:reveal 0.4s ease both;}
+.err-msg.show{display:block;}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:1fr auto;gap:48px;align-items:end;padding-bottom:48px;border-bottom:1px solid var(--border);margin-bottom:44px;position:relative;animation:reveal 1s 0.2s ease both;}
+.hero::after{content:'';position:absolute;bottom:-1px;left:0;width:100px;height:1px;background:var(--gold);}
+.city-name{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(2.6rem,5.5vw,4.2rem);line-height:0.95;letter-spacing:-0.01em;margin-bottom:8px;}
+.city-country{font-family:'Cinzel',serif;font-size:10px;font-weight:400;letter-spacing:0.45em;color:var(--gold);text-transform:uppercase;margin-bottom:32px;}
+.temp-display{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(6rem,13vw,10rem);line-height:0.82;letter-spacing:-6px;position:relative;display:inline-block;}
+.temp-display sup{font-size:0.28em;letter-spacing:0;vertical-align:super;color:var(--gold);font-weight:300;}
+.desc-main{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.35rem;color:var(--dim);margin-top:16px;letter-spacing:0.04em;}
+.quick-row{display:flex;gap:32px;flex-wrap:wrap;margin-top:26px;}
+.q-item span.lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.3em;color:var(--dim2);text-transform:uppercase;display:block;margin-bottom:4px;}
+.q-item span.val{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--white);}
+.icon-main{font-size:clamp(3.5rem,8vw,5.5rem);filter:drop-shadow(0 0 40px rgba(201,169,110,0.4));animation:breathe 5s ease-in-out infinite;align-self:center;}
+@keyframes breathe{0%,100%{transform:scale(1) translateY(0);filter:drop-shadow(0 0 40px rgba(201,169,110,0.35));}50%{transform:scale(1.06) translateY(-10px);filter:drop-shadow(0 0 65px rgba(201,169,110,0.6));}}
+
+/* CARDS GRID */
+.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:1px;animation:reveal 1s 0.3s ease both;}
+.cgrid2{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-top:none;margin-bottom:44px;animation:reveal 1s 0.35s ease both;}
+.sc{background:var(--surface);padding:28px 24px;transition:background 0.3s;position:relative;overflow:hidden;}
+.sc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,169,110,0.05) 0%,transparent 60%);opacity:0;transition:opacity 0.4s;}
+.sc:hover{background:var(--black3);}
+.sc:hover::before{opacity:1;}
+.sc:hover .gold-bar{width:40px;}
+.gold-bar{width:0;height:1px;background:var(--gold);margin-bottom:16px;transition:width 0.5s cubic-bezier(0.2,0,0,1);}
+.sc-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.3em;color:var(--dim2);text-transform:uppercase;margin-bottom:10px;display:block;}
+.sc-val{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:2.2rem;line-height:1;color:var(--white);}
+.sc-val .u{font-size:0.5em;color:var(--dim);vertical-align:baseline;margin-left:2px;}
+.sc-sub{font-size:11px;color:var(--dim2);margin-top:8px;letter-spacing:0.06em;}
+.tbar{height:1px;background:var(--border2);margin-top:16px;position:relative;overflow:hidden;}
+.tfill{height:100%;background:linear-gradient(90deg,var(--gold-dk),var(--gold));transition:width 1.5s cubic-bezier(0.4,0,0.2,1);}
+.compass-wrap{margin-top:14px;display:flex;align-items:center;gap:12px;}
+.cdial{width:40px;height:40px;border:1px solid var(--border2);border-radius:50%;position:relative;flex-shrink:0;}
+.cdial::before,.cdial::after{content:'';position:absolute;background:var(--border2);}
+.cdial::before{width:1px;height:100%;left:50%;top:0;transform:translateX(-50%);}
+.cdial::after{width:100%;height:1px;top:50%;left:0;transform:translateY(-50%);}
+.cneedle{position:absolute;top:4px;left:50%;width:1px;height:14px;margin-left:-0.5px;background:linear-gradient(to bottom,var(--gold) 50%,var(--dim2) 50%);transform-origin:50% calc(100% + 4px);transition:transform 1.2s cubic-bezier(0.4,0,0.2,1);border-radius:1px;}
+.cdir-txt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.9rem;color:var(--dim);}
+
+/* SUN */
+.sun-sec{margin-bottom:44px;border:1px solid var(--border);background:var(--surface);padding:36px;position:relative;animation:reveal 1s 0.4s ease both;}
+.sun-sec::before{content:'';position:absolute;top:0;left:36px;width:60px;height:1px;background:var(--gold);}
+.sec-ttl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.4em;color:var(--gold);text-transform:uppercase;margin-bottom:28px;}
+.sun-arc-area{position:relative;height:90px;margin-bottom:16px;}
+.sun-arc-area svg{width:100%;height:100%;overflow:visible;}
+.arc-bg{fill:none;stroke:var(--border2);stroke-width:1;stroke-dasharray:3 8;}
+.arc-done{fill:none;stroke:url(#gg);stroke-width:1.5;}
+.sun-dot{position:absolute;font-size:1.25rem;transform:translateX(-50%);filter:drop-shadow(0 0 14px rgba(201,169,110,0.9));transition:left 1s ease,bottom 1s ease;line-height:1;}
+.sun-times-row{display:flex;justify-content:space-between;}
+.sun-times-row .lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.3em;color:var(--dim2);text-transform:uppercase;display:block;margin-bottom:4px;}
+.sun-times-row .tv{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--white);font-weight:300;display:block;}
+
+/* FORECAST */
+.fc-sec{animation:reveal 1s 0.5s ease both;}
+.fgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);}
+.fc{background:var(--surface);padding:24px 12px;text-align:center;transition:background 0.3s;position:relative;cursor:default;}
+.fc:hover{background:var(--black3);}
+.fc.today::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--gold);}
+.fc-day{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.3em;color:var(--dim2);text-transform:uppercase;margin-bottom:16px;display:block;}
+.fc.today .fc-day{color:var(--gold);}
+.fc-ico{font-size:1.9rem;margin-bottom:14px;display:block;}
+.fc-hi{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:300;display:block;line-height:1;}
+.fc-lo{font-size:12px;color:var(--dim2);margin-top:4px;display:block;}
+
+/* LOADING */
+.veil{position:fixed;inset:0;z-index:200;background:rgba(8,8,8,0.88);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.4s;}
+.veil.on{opacity:1;pointer-events:all;}
+.ring{width:48px;height:48px;border:1px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* EMPTY */
+.empty{text-align:center;padding:90px 20px;}
+.empty-glyph{font-size:2.5rem;opacity:0.1;margin-bottom:20px;font-family:'Cormorant Garamond',serif;}
+.empty-line{width:40px;height:1px;background:var(--gold-dk);margin:20px auto;}
+.empty-ttl{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.7rem;color:var(--dim2);font-style:italic;margin-bottom:8px;}
+.empty-sub{font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.3em;color:var(--dim2);text-transform:uppercase;}
+
+/* FOOTER */
+.footer{margin-top:60px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:24px;}
+.fbrand{font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.4em;color:var(--dim2);}
+.fattr{font-size:11px;color:var(--dim2);letter-spacing:0.04em;}
+.fattr a{color:var(--gold-dk);text-decoration:none;transition:color 0.2s;}
+.fattr a:hover{color:var(--gold);}
+
+@media(max-width:768px){
+  .wrap{padding:36px 18px 80px;}
+  .hero{grid-template-columns:1fr;gap:20px;}
+  .cgrid,.cgrid2{grid-template-columns:repeat(2,1fr);}
+  .fgrid{grid-template-columns:repeat(5,1fr);}
+  .fc{padding:16px 6px;}
+  .fc-ico{font-size:1.4rem;}
+  .fc-hi{font-size:1.2rem;}
+  .footer{flex-direction:column;gap:12px;text-align:center;}
+  .masthead{flex-direction:column;gap:10px;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="ambient">
+  <div class="glow-orb a" id="glowA"></div>
+  <div class="glow-orb b" id="glowB"></div>
+</div>
+<div class="particles" id="ptC"></div>
+<div class="veil" id="veil"><div class="ring"></div></div>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="brand">Noir Weather</div>
+      <div class="brand-line"></div>
+    </div>
+    <div class="tagline">Cuaca dalam keheningan elegan</div>
+  </div>
+
+  <div class="search-row">
+    <input class="search-input" id="si" type="text" placeholder="Masukkan nama kota…" autocomplete="off">
+    <div class="dvd"></div>
+    <div class="unit-grp">
+      <button class="unit-btn active" id="btnC" onclick="setUnit('C')">°C</button>
+      <div class="usep"></div>
+      <button class="unit-btn" id="btnF" onclick="setUnit('F')">°F</button>
+    </div>
+    <button class="search-btn" id="sb">Cari</button>
+  </div>
+
+  <div class="err-msg" id="em"></div>
+
+  <div id="mc" style="display:none">
+
+    <div class="hero">
+      <div>
+        <div class="city-name" id="cn">—</div>
+        <div class="city-country" id="cc">—</div>
+        <div class="temp-display" id="td">—</div>
+        <div class="desc-main" id="dm">—</div>
+        <div class="quick-row">
+          <div class="q-item"><span class="lbl">Terasa seperti</span><span class="val" id="fl">—</span></div>
+          <div class="q-item"><span class="lbl">Angin</span><span class="val" id="wq">—</span></div>
+          <div class="q-item"><span class="lbl">Visibilitas</span><span class="val" id="vq">—</span></div>
+          <div class="q-item"><span class="lbl">Diperbarui</span><span class="val" id="uq">—</span></div>
+        </div>
+      </div>
+      <div class="icon-main" id="im">🌤️</div>
+    </div>
+
+    <div class="cgrid">
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Kelembapan</span><div class="sc-val" id="hv">—</div><div class="sc-sub">relatif</div><div class="tbar"><div class="tfill" id="hb" style="width:0%"></div></div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Min / Max</span><div class="sc-val" id="mmv" style="font-size:1.4rem">—</div><div class="sc-sub">rentang suhu hari ini</div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Tekanan</span><div class="sc-val" id="pv">—</div><div class="tbar"><div class="tfill" id="pb" style="width:0%;background:linear-gradient(90deg,#2a5a7a,var(--gold))"></div></div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Tutupan Awan</span><div class="sc-val" id="clv">—</div><div class="tbar"><div class="tfill" id="clb" style="width:0%;background:linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.5))"></div></div></div>
+    </div>
+
+    <div class="cgrid2">
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Kecepatan Angin</span><div class="sc-val" id="wv2">—</div><div class="compass-wrap"><div class="cdial"><div class="cneedle" id="ndl"></div></div><span class="cdir-txt" id="wdt">—</span></div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Indeks UV</span><div class="sc-val" id="uvv">—</div><div class="sc-sub" id="uvd">—</div><div class="tbar"><div class="tfill" id="uvb" style="width:0%;background:linear-gradient(90deg,#3aaa4a,#f5c842,#c04040)"></div></div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Titik Embun</span><div class="sc-val" id="dwv">—</div><div class="sc-sub">dew point</div></div>
+      <div class="sc"><div class="gold-bar"></div><span class="sc-lbl">Jarak Pandang</span><div class="sc-val" id="visv">—</div><div class="sc-sub" id="vissub">—</div></div>
+    </div>
+
+    <div class="sun-sec">
+      <div class="sec-ttl">Perjalanan Matahari</div>
+      <div class="sun-arc-area">
+        <svg viewBox="0 0 500 90" preserveAspectRatio="none">
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a6a38" stop-opacity="0.4"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="1"/></linearGradient></defs>
+          <path class="arc-bg" d="M10,85 Q250,-30 490,85"/>
+          <path class="arc-done" id="ad" d=""/>
+        </svg>
+        <div class="sun-dot" id="sdot" style="bottom:0;left:0">🌟</div>
+      </div>
+      <div class="sun-times-row">
+        <div><span class="lbl">Terbit</span><span class="tv" id="srt">—</span></div>
+        <div style="text-align:center"><span class="lbl">Sekarang</span><span class="tv" id="nowt">—</span></div>
+        <div style="text-align:right"><span class="lbl">Terbenam</span><span class="tv" id="sst">—</span></div>
+      </div>
+    </div>
+
+    <div class="fc-sec">
+      <div class="sec-ttl" style="margin-bottom:18px">Prakiraan Lima Hari</div>
+      <div class="fgrid" id="fg"></div>
+    </div>
+
+  </div>
+
+  <div class="empty" id="es">
+    <div class="empty-glyph">◈</div>
+    <div class="empty-line"></div>
+    <div class="empty-ttl">Masukkan nama kota</div>
+    <div class="empty-sub">Data real-time · Tanpa API key</div>
+  </div>
+
+  <div class="footer">
+    <div class="fbrand">Noir Weather · 2026</div>
+    <div class="fattr">Powered by <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> &amp; <a href="https://nominatim.openstreetmap.org" target="_blank">Nominatim OSM</a></div>
+  </div>
+
+</div>
+
+<script>
+// Ambient
+setTimeout(()=>{document.getElementById('glowA').classList.add('active');document.getElementById('glowB').classList.add('active');},200);
+
+// Particles
+const ptC=document.getElementById('ptC');
+for(let i=0;i<30;i++){const p=document.createElement('div');p.className='pt';const s=Math.random()<0.4?2:1;p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;top:${10+Math.random()*85}%;--d:${7+Math.random()*14}s;--dl:${Math.random()*14}s`;ptC.appendChild(p);}
+
+// State
+let unit='C',geo=null,wx=null;
+function setUnit(u){unit=u;document.getElementById('btnC').className='unit-btn'+(u==='C'?' active':'');document.getElementById('btnF').className='unit-btn'+(u==='F'?' active':'');if(geo&&wx)render(geo,wx);}
+const toF=c=>Math.round(c*9/5+32);
+const dT=c=>unit==='C'?Math.round(c)+'°C':toF(c)+'°F';
+const WI={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WD={0:'Cerah',1:'Sebagian Berawan',2:'Berawan Sedang',3:'Mendung',45:'Berkabut',48:'Berkabut',51:'Gerimis Ringan',53:'Gerimis',55:'Gerimis Lebat',61:'Hujan Ringan',63:'Hujan',65:'Hujan Lebat',71:'Salju Ringan',73:'Salju',75:'Salju Lebat',80:'Hujan Lokal',81:'Hujan Deras',82:'Badai Hujan',95:'Badai Petir',96:'Badai Petir',99:'Badai Petir Besar'};
+const WDIR=['Utara','Timur Laut','Timur','Tenggara','Selatan','Barat Daya','Barat','Barat Laut'];
+function s(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function w(id,v){const e=document.getElementById(id);if(e)e.style.width=v;}
+function setLoading(b){document.getElementById('veil').className='veil'+(b?' on':'');}
+
+async function geocode(q){
+  const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'id'}});
+  const d=await r.json();
+  if(!d.length)throw new Error('Kota tidak ditemukan. Coba nama lain.');
+  const pts=d[0].display_name.split(',');
+  return{lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),name:d[0].name||pts[0].trim(),country:pts[pts.length-1].trim()};
+}
+async function fetchWx(lat,lon){
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,visibility,uv_index,dew_point_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=5`;
+  return(await fetch(u)).json();
+}
+
+function render(g,wxd){
+  geo=g;wx=wxd;
+  const c=wxd.current,d=wxd.daily;
+  s('cn',g.name);s('cc',g.country.toUpperCase());
+  const tv=unit==='C'?Math.round(c.temperature_2m):toF(c.temperature_2m);
+  document.getElementById('td').innerHTML=tv+'<sup>'+(unit==='C'?'°C':'°F')+'</sup>';
+  s('dm',WD[c.weather_code]||'—');
+  s('im',WI[c.weather_code]||'🌡️');
+  s('fl',dT(c.apparent_temperature));
+  s('wq',Math.round(c.wind_speed_10m)+' km/h');
+  const vis=c.visibility;
+  s('vq',vis>=1000?(vis/1000).toFixed(1)+' km':vis+' m');
+  s('uq',new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
+
+  document.getElementById('hv').innerHTML=c.relative_humidity_2m+'<span class="u">%</span>';
+  w('hb',c.relative_humidity_2m+'%');
+  document.getElementById('mmv').innerHTML=dT(d.temperature_2m_min[0])+'<span style="color:var(--dim2);font-size:0.65em"> / </span>'+dT(d.temperature_2m_max[0]);
+  document.getElementById('pv').innerHTML=Math.round(c.surface_pressure)+'<span class="u">hPa</span>';
+  w('pb',Math.max(0,Math.min(100,(c.surface_pressure-950)/100*100))+'%');
+  document.getElementById('clv').innerHTML=c.cloud_cover+'<span class="u">%</span>';
+  w('clb',c.cloud_cover+'%');
+  document.getElementById('wv2').innerHTML=Math.round(c.wind_speed_10m)+'<span class="u">km/h</span>';
+  s('wdt',WDIR[Math.round(c.wind_direction_10m/45)%8]);
+  document.getElementById('ndl').style.transform=`rotate(${c.wind_direction_10m}deg)`;
+  const uv=c.uv_index??0;
+  document.getElementById('uvv').innerHTML=uv.toFixed(1);
+  s('uvd',uv<3?'Rendah':uv<6?'Sedang':uv<8?'Tinggi':uv<11?'Sangat Tinggi':'Ekstrem');
+  w('uvb',Math.min(100,uv/12*100)+'%');
+  const dw=c.dew_point_2m;
+  document.getElementById('dwv').innerHTML=dw!=null?dT(dw):'—';
+  document.getElementById('visv').innerHTML=vis>=1000?(vis/1000).toFixed(1)+'<span class="u">km</span>':vis+'<span class="u">m</span>';
+  s('vissub',vis>5000?'Jarak pandang baik':vis>1000?'Terbatas':'Sangat terbatas');
+
+  // Sun arc
+  const sr=new Date(d.sunrise[0]),ss=new Date(d.sunset[0]),now=new Date();
+  s('srt',sr.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
+  s('sst',ss.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
+  s('nowt',now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
+  const total=ss-sr,elapsed=Math.max(0,Math.min(total,now-sr)),pct=elapsed/total;
+  let pd='';
+  for(let i=0;i<=40*pct;i++){const t=i/40,x=10+480*t,y=85-115*Math.sin(Math.PI*t);pd+=(i===0?'M':'L')+x+','+y;}
+  document.getElementById('ad').setAttribute('d',pd||'M10,85');
+  const tx=10+480*pct,ty=85-115*Math.sin(Math.PI*pct);
+  const sd=document.getElementById('sdot');
+  sd.style.left=(tx/500*100)+'%';
+  sd.style.bottom=(90-ty)+'px';
+
+  // Forecast
+  const fg=document.getElementById('fg');fg.innerHTML='';
+  const fmtDay=(str,i)=>i===0?'Hari Ini':new Date(str).toLocaleDateString('id-ID',{weekday:'short'}).toUpperCase();
+  for(let i=0;i<5;i++){
+    const fc=document.createElement('div');fc.className='fc'+(i===0?' today':'');
+    fc.innerHTML=`<span class="fc-day">${fmtDay(d.time[i],i)}</span><span class="fc-ico">${WI[d.weather_code[i]]||'—'}</span><span class="fc-hi">${dT(d.temperature_2m_max[i])}</span><span class="fc-lo">${dT(d.temperature_2m_min[i])}</span>`;
+    fg.appendChild(fc);
+  }
+
+  document.getElementById('mc').style.display='block';
+  document.getElementById('es').style.display='none';
+}
+
+async function search(){
+  const q=document.getElementById('si').value.trim();if(!q)return;
+  setLoading(true);
+  const em=document.getElementById('em');em.className='err-msg';
+  try{const g=await geocode(q);const wxd=await fetchWx(g.lat,g.lon);render(g,wxd);}
+  catch(e){em.textContent=e.message;em.className='err-msg show';}
+  finally{setLoading(false);}
+}
+
+document.getElementById('sb').addEventListener('click',search);
+document.getElementById('si').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+setTimeout(()=>{document.getElementById('si').value='Jakarta';search();},400);
+</script>
+</body>
+</html>
